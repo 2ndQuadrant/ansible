@@ -2471,8 +2471,19 @@ class ContainerManager(DockerBaseClass):
         self.facts = container.raw
 
     def absent(self):
+
         container = self._get_container(self.parameters.name)
         if container.exists:
+
+            # If labels are defined, let's compare those as well to make sure
+            # the container in question is actually the one user intends to remove.
+            # This safeguards against the possibility of removing a container that
+            # may now have the same name but is actually different
+            if self.parameters.labels:
+                config = self.client.inspect_container(self.parameters.name)
+                labels = config['Config']['Labels']
+                if not (self.parameters.labels.items() <= labels.items()):
+                    return None
             if container.running:
                 self.diff_tracker.add('running', parameter=False, active=True)
                 self.container_stop(container.Id)
